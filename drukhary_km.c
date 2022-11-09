@@ -364,7 +364,7 @@ static long device_ioctl(struct file *file, unsigned int ioctl_num, unsigned lon
             sprintf(buff_int, "%lu", regs->sp);
             strcat(output, buff_int);
         }
-        if (strcmp(command, "mul_sig") == 0)
+        if (strcmp(command, "ms") == 0)
         {
             int result = get_multiprocess_signals_info(pid, output);
             if (result)
@@ -373,14 +373,6 @@ static long device_ioctl(struct file *file, unsigned int ioctl_num, unsigned lon
             }
         }
         if (strcmp(command, "pg") == 0)
-        {
-            int result = get_page_info(pid, output);
-            if (result)
-            {
-                return 1;
-            }
-        }
-        if (strcmp(command, "mul_sig") == 0)
         {
             int result = get_page_info(pid, output);
             if (result)
