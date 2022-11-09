@@ -15,7 +15,8 @@
 
 
 
-``static int get_task_struct_info(int pid, char *output)
+```
+static int get_task_struct_info(int pid, char *output)
 {
     char buff_int[20];
     strcat(output, "get_multiprocess_signals_info -> ");
@@ -36,7 +37,8 @@
     sprintf(buff_int, "%d", task->tgid);
     strcat(output, buff_int);
     strcat(output, "\n");
-}``
+}
+```
 
 > output - просто любая строка, которую мы потом выведем на пространство пользователя
 
