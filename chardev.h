@@ -66,7 +66,7 @@
 /*
  * The name of the device file
  */
-#define DEVICE_FILE_NAME "drukhary_character_device"
-#define DEVICE_NAME "drukhary_character_device"
+#define DEVICE_FILE_NAME "lab_character_device"
+#define DEVICE_NAME "lab_character_device"
 #define BUFFER_SIZE 256
 #endif

@@ -61,13 +61,6 @@ static int get_multiprocess_signals_info(int pid, char *output)
             strcat(output, buff_int);
             strcat(output, "\n");
         }
-        else
-        {
-            strcat(output, "Multiprocess's list is absolutely empty\n");
-            sprintf(buff_int, "%lu", (unsigned long)signal);
-            strcat(output, buff_int);
-            strcat(output, "\n");
-        }
     }
     strcat(output, "\n");
 
