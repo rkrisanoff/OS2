@@ -21,14 +21,56 @@
 #include <asm/siginfo.h>    //siginfo
 #include <linux/rcupdate.h> //rcu_read_lock
 #include <linux/sched.h>    //find_task_by_pid_type
-#define SUCCESS 0
 
-static int is_device_open = 0;
-static char message[BUFFER_SIZE];
-static char *message_ptr;
+MODULE_VERSION("1.9.17");
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Drukhary");
+MODULE_DESCRIPTION("OS LAB2");
+
+static int __init kmod_init(void);
+static void __exit kmod_exit(void);
+static int lab_dev_open(struct inode *inode, struct file *file);
+static int lab_dev_release(struct inode *inode, struct file *file);
+static ssize_t lab_dev_read(struct file *filp, char __user *buf, size_t len, loff_t *off);
+static ssize_t lab_dev_write(struct file *filp, const char *buf, size_t len, loff_t *off);
+static long lab_dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
+
+/**
+ * lab network device struct
+ * */
+struct lab_net_device
+{
+    int number;
+    char name[16];
+    unsigned long state;
+};
+/**
+ * lab page struct
+ * */
+struct lab_page
+{
+    unsigned long flags;
+    unsigned long virtual_address;
+};
+/**
+ * request we sent to device
+ * */
+struct lab_request
+{
+    int pid;
+};
+/**
+ * request we get from device
+ * */
+struct lab_response
+{
+    struct lab_net_device lnd;
+    struct lab_page lp;
+};
+static struct lab_request *lab_req;
+static struct lab_response *lab_res;
 static int get_multiprocess_signals_info(int pid, char *output)
 {
-
     char buff_int[20];
     strcat(output, "get_multiprocess_signals_info -> ");
     sprintf(buff_int, "%d", pid);
@@ -123,7 +165,7 @@ static struct page *get_current_page(struct mm_struct *mm, long virtual_address)
     page = pte_page(*pte);
     return page;
 }
-static int get_page_info(int pid, char *output)
+static int get_page_info(int pid, struct lab_page *lp)
 {
     struct task_struct *t = get_pid_task(find_get_pid(pid), PIDTYPE_PID);
     char buff_int[20];
@@ -145,7 +187,7 @@ static int get_page_info(int pid, char *output)
         else
         {
             struct vm_area_struct *vas = mm->mmap;
-            long virtual_address;
+            unsigned long virtual_address;
 
             for (virtual_address = vas->vm_start; virtual_address <= vas->vm_end; virtual_address += PAGE_SIZE)
             {
@@ -154,18 +196,8 @@ static int get_page_info(int pid, char *output)
                 page_struct = get_current_page(mm, virtual_address);
                 if (page_struct != NULL)
                 {
-                    strcat(output, "page_struct->flags ");
-                    sprintf(buff_int, "%x", page_struct->flags);
-                    strcat(output, buff_int);
-                    strcat(output, "\n");
-                    strcat(output, "virtual_address ");
-                    sprintf(buff_int, "%x", virtual_address);
-                    strcat(output, buff_int);
-                    strcat(output, "\n");
-                    strcat(output, "page_struct->mapping ");
-                    sprintf(buff_int, "%x", page_struct->mapping);
-                    strcat(output, buff_int);
-                    strcat(output, "\n");
+                    lp->flags = page_struct->flags;
+                    lp->virtual_address = virtual_address;
                     return 0;
                 }
             }
@@ -179,78 +211,62 @@ static int get_page_info(int pid, char *output)
     }
     return 0;
 }
-
-static int device_open(struct inode *inode, struct file *file)
+static int get_net_device_info(struct lab_net_device *lnd)
 {
-    // logs
-    printk(KERN_INFO "device_open(%p)\n", file);
-
-    if (is_device_open)
+    struct net_device *n_dev;
+    read_lock(&dev_base_lock);
+    n_dev = first_net_device(&init_net);
+    if (!n_dev)
     {
-        return -EBUSY;
-    }
-    // notice the device is open
-    is_device_open = 1;
-    // zeroing out message_ptr
-    message_ptr = message;
-    // Increment the reference count of current module
-    try_module_get(THIS_MODULE);
-    return SUCCESS;
-}
-
-static int device_release(struct inode *inode, struct file *file)
-{
-    // logs
-    printk(KERN_INFO "device_release(%p,%p)\n", inode, file);
-    // notice the device is close
-    is_device_open = 0;
-    // Decrement the reference count of current module
-    module_put(THIS_MODULE);
-    return SUCCESS;
-}
-
-static ssize_t device_read(
-    struct file *file,
-    char __user *buffer,
-    size_t length,
-    loff_t *offset)
-{
-    int bytes_read = 0;
-
-    // logs
-    printk(KERN_INFO "device_read(%p,%p,%lu)\n", file, buffer, length);
-    if ((*message_ptr) == 0)
-    {
+        lab_res->lnd = (struct lab_net_device){NULL, NULL, NULL};
         return 0;
     }
-    while (length && (*message_ptr))
+    int count;
+    count = 0;
+    while (n_dev)
     {
+        lab_res->lnd.number = count;
+        strcpy(lab_res->lnd.name, n_dev->name);
+        lab_res->lnd.state = n_dev->state;
 
-        // copy char from kernelland to userland
-        put_user(*(message_ptr), buffer);
-        message_ptr++;
-        buffer++;
-        length--;
-        bytes_read++;
+        n_dev = next_net_device(n_dev);
+        count++;
     }
-
-    printk(KERN_INFO "Read %d bytes, %lu left\n", bytes_read, length);
-    return bytes_read;
+    read_unlock(&dev_base_lock);
+    return 0;
 }
-
-static ssize_t device_write(struct file *file, const char __user *buffer, size_t length, loff_t *offset)
+/*
+** This function will be called when we open the Device file
+*/
+static int lab_dev_open(struct inode *inode, struct file *file)
 {
-    int i;
-    printk(KERN_INFO "device_write(%p,%s,%lu)", file, buffer, length);
-    for (i = 0; (i < length) && (i < BUFFER_SIZE); i++)
-    {
-        // copy char from userland to kernelland
-        get_user(message[i], buffer + i);
-        printk(KERN_INFO "device_write(temp_char=%c,i=%d)", message[i], i);
-    }
+    pr_info("Device File Opened...!!!\n");
+    return 0;
+}
+/*
+** This function will be called when we close the Device file
+*/
+static int lab_dev_release(struct inode *inode, struct file *file)
+{
 
-    message_ptr = message;
-    return i;
+    pr_info("Device File Closed...!!!\n");
+    return 0;
+}
+/*
+** This function will be called when we read the Device file
+*/
+static ssize_t lab_dev_read(struct file *filp, char __user *buf, size_t len, loff_t *off)
+{
+    pr_info("Read Function\n");
+    return 0;
+}
+/*
+** This function will be called when we write the Device file
+*/
+static ssize_t lab_dev_write(struct file *filp, const char __user *buf, size_t len, loff_t *off)
+{
+    pr_info("Write function\n");
+    return len;
 }
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 35))
@@ -259,165 +275,65 @@ static int device_ioctl(struct inode *inode,
                         unsigned int ioctl_num,
                         unsigned long ioctl_param)
 #else
-static long device_ioctl(struct file *file, unsigned int ioctl_num, unsigned long ioctl_param)
+static long lab_dev_ioctl(struct file *file, unsigned int ioctl_num, unsigned long ioctl_param)
 #endif
 {
     printk(KERN_INFO "device_ioctl(%p,%lu,%lu)", file, ioctl_num, ioctl_param);
-    int i;
-    char *ch_user_space_ptr;
-    char ch;
+    unsigned long ret_val_ku;
     switch (ioctl_num)
     {
-    case IOCTL_SET_MSG:
-        ch_user_space_ptr = (char *)ioctl_param;
-        get_user(ch, ch_user_space_ptr);
-        for (i = 0; ch && i < BUFFER_SIZE; i++, ch_user_space_ptr++)
+
+    case IOCTL_SET_INFO:
+        printk(KERN_INFO "IOCTL_SET_INFO\n");
+        if (lab_req == NULL)
         {
-            get_user(ch, ch_user_space_ptr);
+            lab_req = vmalloc(sizeof(struct lab_request));
         }
 
-        device_write(file, (char *)ioctl_param, i, 0);
+        ret_val_ku = copy_from_user(lab_req, (struct lab_request *)ioctl_param, sizeof(struct lab_request));
+        if (ret_val_ku < 0)
+        {
+            printk(KERN_INFO "ERROR WITH COPUIING ");
+        }
+
+        if (lab_res != NULL)
+        {
+            vfree(lab_res);
+            lab_res = NULL;
+        }
         break;
-
-    case IOCTL_GET_MSG:
-        char *output = vmalloc(sizeof(char) * BUFFER_SIZE);
-        char *temporary = vmalloc(sizeof(char) * BUFFER_SIZE);
-        char *command = vmalloc(sizeof(char) * BUFFER_SIZE);
-        char *separator = vmalloc(sizeof(char) * BUFFER_SIZE);
-        int pid;
-        printk(KERN_INFO "Received msg from user_space: %s\n", message);
-        sprintf(output, "%s", "");
-        sprintf(temporary, "%s", message);
-        strcpy(temporary, message);
-
-        separator = strchr(temporary, ' ');
-        if (separator == NULL)
+    case IOCTL_GET_INFO:
+        printk(KERN_INFO "IOCTL_GET_INFO\n");
+        if (lab_res == NULL)
         {
-            command = temporary;
-            pid = -1;
+            lab_res = vmalloc(sizeof(struct lab_response));
         }
-        else
+        int ret_val = 0;
+        ret_val = get_net_device_info(&lab_res->lnd);
+        ret_val = get_page_info(lab_req->pid, &lab_res->lp);
+
+        ret_val_ku = copy_to_user((struct lab_response *)ioctl_param, lab_res, sizeof(struct lab_response));
+
+        if (lab_req != NULL)
         {
-            command = strsep(&temporary, " ");
-            temporary = strsep(&temporary, " ");
-            if (temporary != NULL)
-            {
-                int res_val = kstrtoint(temporary, 10, &pid);
-                printk(KERN_INFO "received number: %d\n", res_val);
-                printk(KERN_INFO "received number: %d\n", pid);
-            }
-            else
-            {
-                printk(KERN_INFO "Silly number: %s\n", temporary);
-            }
+            vfree(lab_req);
+            lab_req = NULL;
         }
-
-        if (strcmp(command, "net_device") == 0)
-        {
-            struct net_device *n_dev;
-            read_lock(&dev_base_lock);
-            n_dev = first_net_device(&init_net);
-            if (!n_dev)
-            {
-                strcat(output, "No network devices ;(((");
-            }
-            int c;
-            c = 0;
-            char buff_int[10];
-            while (n_dev)
-            {
-                sprintf(buff_int, "%d", c);
-                strcat(output, "Number of net device: ");
-                strcat(output, buff_int);
-                strcat(output, "\n");
-                sprintf(buff_int, "%s", n_dev->name);
-                strcat(output, buff_int);
-                strcat(output, "\n");
-                strcat(output, "State: ");
-                sprintf(buff_int, "%lu", n_dev->state);
-                strcat(output, buff_int);
-                n_dev = next_net_device(n_dev);
-                c++;
-                strcat(output, "\n\n");
-            }
-            strcat(output, "Total number of ");
-            sprintf(buff_int, "%d", c);
-            strcat(output, buff_int);
-            read_unlock(&dev_base_lock);
-        }
-        if (strcmp(command, "pt_regs") == 0)
-        {
-            struct pt_regs *regs = task_pt_regs(current);
-            char buff_int[10];
-            strcat(output, "REGS: \n");
-            strcat(output, "r10 ");
-            sprintf(buff_int, "%lu", regs->r10);
-            strcat(output, buff_int);
-            strcat(output, "\nsp ");
-            sprintf(buff_int, "%lu", regs->sp);
-            strcat(output, buff_int);
-        }
-        if (strcmp(command, "ms") == 0)
-        {
-            int result = get_multiprocess_signals_info(pid, output);
-            if (result)
-            {
-                return 1;
-            }
-        }
-        if (strcmp(command, "pg") == 0)
-        {
-            int result = get_page_info(pid, output);
-            if (result)
-            {
-                return 1;
-            }
-        }
-        if (strcmp(output, "") == 0)
-        {
-            sprintf(output, "%s", "Wrong input");
-        }
-        strcat(output, "\n");
-
-        printk(KERN_ALERT "output: %s", output);
-        // zeroing up the message
-        sprintf(message, "%s", "");
-
-        for (i = 0; i < strlen(output) && i < BUFFER_SIZE; ++i)
-        {
-            message[i] = output[i];
-        }
-
-        vfree(output);
-        vfree(temporary);
-        vfree(command);
-        vfree(separator);
-        message_ptr = message;
-
-        i = device_read(file, (char *)ioctl_param, i, 0);
-
-        put_user('\0', (char *)ioctl_param + i);
-
-        break;
-
-    case IOCTL_GET_NTH_BYTE:
-
-        return message[ioctl_param];
         break;
     }
-    return SUCCESS;
+    return 0;
 }
 
 struct file_operations file_ops = {
     .owner = THIS_MODULE,
-    .read = device_read,
-    .write = device_write,
-    .open = device_open,
-    .release = device_release,
+    .read = lab_dev_read,
+    .write = lab_dev_write,
+    .open = lab_dev_open,
+    .release = lab_dev_release,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 35))
     .ioctl = device_ioctl
 #else
-    .unlocked_ioctl = device_ioctl
+    .unlocked_ioctl = lab_dev_ioctl
 #endif
 };
 
@@ -443,10 +359,6 @@ int init_module()
     return 0;
 }
 
-MODULE_VERSION("1.9.17");
-MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Drukhary");
-MODULE_DESCRIPTION("OS LAB2");
 void cleanup_module()
 {
     unregister_chrdev(MAJOR_NUM, DEVICE_NAME);
