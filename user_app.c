@@ -35,18 +35,20 @@ int main()
     int fd;
 
     fd = open(DEVICE_FILE_NAME, 0);
+    char request[BUFFER_SIZE];
     if (fd < 0)
     {
         printf("Can't open device file: %s\n", DEVICE_FILE_NAME);
         exit(-1);
     }
+    fgets(request, BUFFER_SIZE, stdin);
 
     struct lab_request  * lab_req = malloc(sizeof(struct lab_request));
     lab_req->pid = 1;
     struct lab_response * lab_res = malloc(sizeof(struct lab_response));
 
-    ioctl_set_request(fd, lab_req);
-    ioctl_get_response(fd,lab_res);
+    ioctl_set_request( fd, lab_req);
+    ioctl_get_response(fd, lab_res);
     close(fd);
 
     printf("number of device is %d\n", lab_res->lnd.number);
@@ -54,6 +56,6 @@ int main()
     printf("state is %lu\n", lab_res->lnd.state);
 
     printf("flags of page: %x\n", lab_res->lp.flags);
-    printf("virtual address is %lu\n", lab_res->lp.virtual_address);
+    printf("virtual address is %x\n", lab_res->lp.virtual_address);
     return 0;
 }
