@@ -16,57 +16,23 @@
 #include <asm/uaccess.h>
 #include <linux/netdevice.h>
 #include <linux/list.h>
-#include "chardev.h"
-
 #include <asm/siginfo.h>    //siginfo
 #include <linux/rcupdate.h> //rcu_read_lock
 #include <linux/sched.h>    //find_task_by_pid_type
+// MODULE_LICENSE("GPL");
+#include "chardev.h"
 
 MODULE_VERSION("1.9.17");
-MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Drukhary");
 MODULE_DESCRIPTION("OS LAB2");
 
-static int __init kmod_init(void);
-static void __exit kmod_exit(void);
 static int lab_dev_open(struct inode *inode, struct file *file);
 static int lab_dev_release(struct inode *inode, struct file *file);
 static ssize_t lab_dev_read(struct file *filp, char __user *buf, size_t len, loff_t *off);
 static ssize_t lab_dev_write(struct file *filp, const char *buf, size_t len, loff_t *off);
 static long lab_dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
 
-/**
- * lab network device struct
- * */
-struct lab_net_device
-{
-    int number;
-    char name[16];
-    unsigned long state;
-};
-/**
- * lab page struct
- * */
-struct lab_page
-{
-    unsigned long flags;
-    unsigned long virtual_address;
-};
-/**
- * request we sent to device
- * */
-struct lab_request
-{
-    int pid;
-};
-/**
- * request we get from device
- * */
-struct lab_response
-{
-    struct lab_net_device lnd;
-    struct lab_page lp;
-};
+
 static struct lab_request *lab_req;
 static struct lab_response *lab_res;
 static int get_multiprocess_signals_info(int pid, char *output)
@@ -131,10 +97,10 @@ static int get_multiprocess_signals_info(int pid, char *output)
 }
 static struct page *get_current_page(struct mm_struct *mm, long virtual_address)
 {
-    pgd_t *pgd;
-    p4d_t *p4d;
-    pud_t *pud;
-    pmd_t *pmd;
+	pgd_t *pgd;
+	p4d_t *p4d;
+	pud_t *pud;
+	pmd_t *pmd;
     pte_t *pte;
     struct page *page = NULL;
     pgd = pgd_offset(mm, virtual_address);
@@ -168,7 +134,6 @@ static struct page *get_current_page(struct mm_struct *mm, long virtual_address)
 static int get_page_info(int pid, struct lab_page *lp)
 {
     struct task_struct *t = get_pid_task(find_get_pid(pid), PIDTYPE_PID);
-    char buff_int[20];
     printk(KERN_INFO "task_struct->%p\n", t);
 
     if (t == NULL)
@@ -218,8 +183,7 @@ static int get_net_device_info(struct lab_net_device *lnd)
     n_dev = first_net_device(&init_net);
     if (!n_dev)
     {
-        lab_res->lnd = (struct lab_net_device){NULL, NULL, NULL};
-        return 0;
+        return -1;
     }
     int count;
     count = 0;

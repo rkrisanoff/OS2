@@ -6,38 +6,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
-/**
- * lab network device struct
- * */
-struct lab_net_device
-{
-    int number;
-    char name[16];
-    unsigned long state;
-};
-/**
- * lab page struct
- * */
-struct lab_page
-{
-    unsigned long flags;
-    unsigned long virtual_address;
-};
-/**
- * request we sent to device
- * */
-struct lab_request
-{
-    int pid;
-};
-/**
- * request we get from device
- * */
-struct lab_response
-{
-    struct lab_net_device lnd;
-    struct lab_page lp;
-};
 
 void ioctl_set_request(int fd, struct lab_request *lab_req)
 {
