@@ -61,9 +61,9 @@ static int get_task_struct_info(int pid, char *output)
 
 ### [/kernel/fork.c](https://github.com/torvalds/linux/blob/1440f576022887004f719883acb094e7e0dd4944/kernel/fork.c)
 
-[здесь объявляется поле `delayed` типа `struct multiprocess_signals`](https://github.com/torvalds/linux/blob/1440f576022887004f719883acb094e7e0dd4944/kernel/fork.c#L1996)
+[Здесь](https://github.com/torvalds/linux/blob/1440f576022887004f719883acb094e7e0dd4944/kernel/fork.c#L1996) объявляется поле `delayed` типа `struct multiprocess_signals`
 
-[Здесь сигналы принудительно доставляются в `delayed`(https://github.com/torvalds/linux/blob/1440f576022887004f719883acb094e7e0dd4944/kernel/fork.c#L2065
+[Здесь](https://github.com/torvalds/linux/blob/1440f576022887004f719883acb094e7e0dd4944/kernel/fork.c#L2065) сигналы принудительно доставляются в `delayed`
 
 
 [Здесь](https://github.com/torvalds/linux/blob/1440f576022887004f719883acb094e7e0dd4944/kernel/fork.c#L2475) или [здесь](https://github.com/torvalds/linux/blob/1440f576022887004f719883acb094e7e0dd4944/kernel/fork.c#L2554) структура уничтожается
