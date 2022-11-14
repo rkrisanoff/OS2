@@ -47,28 +47,32 @@ static int get_task_struct_info(int pid, char *output)
 
 ``cat /proc/<PID>/status | grep Tgid``
 
-### Что известно про `multiprocess_signals`
+## Что известно про `multiprocess_signals`
 
 В случае с multiprocess_signals - он встречается в ядре [три](https://github.com/torvalds/linux/search?q=multiprocess_signals) раза
-![image](https://user-images.githubusercontent.com/87571811/200832786-e57cbc96-b571-49f9-9246-081d56b75a23.png)
 
-И судя по описанию используется для того, [чтобы собирать сигналы](https://github.com/torvalds/linux/blob/493ffd6605b2d3d4dc7008ab927dba319f36671f/include/linux/sched/signal.h),
-которые процесс принимает непосредственно по время выполнения [fork()](https://github.com/torvalds/linux/blob/1440f576022887004f719883acb094e7e0dd4944/kernel/fork.c)
+И судя по описанию используется для того, чтобы собирать сигналы которые процесс принимает непосредственно по время выполнения fork()
 
-Здесь объявляется
+### [linux/sched/signal.h](https://github.com/torvalds/linux/blob/493ffd6605b2d3d4dc7008ab927dba319f36671f/include/linux/sched/signal.h#L109)
 
-![image](https://user-images.githubusercontent.com/87571811/200835468-308c5786-1d8a-4503-bade-2ecb770debfd.png)
+[Здесь объявляется сама структура](https://github.com/torvalds/linux/blob/493ffd6605b2d3d4dc7008ab927dba319f36671f/include/linux/sched/signal.h#L70)
 
-Здесь используется
+[Поле `multiprocess` в виде связного списка](https://github.com/torvalds/linux/blob/493ffd6605b2d3d4dc7008ab927dba319f36671f/include/linux/sched/signal.h#L109)
 
-![image](https://user-images.githubusercontent.com/87571811/200835721-eea9ba5d-266b-4d3f-aadd-6cb8d7ef5447.png)
+### [/kernel/fork.c](https://github.com/torvalds/linux/blob/1440f576022887004f719883acb094e7e0dd4944/kernel/fork.c)
 
-См комментарии
+[здесь объявляется поле `delayed` типа `struct multiprocess_signals`](https://github.com/torvalds/linux/blob/1440f576022887004f719883acb094e7e0dd4944/kernel/fork.c#L1996)
 
-![image](https://user-images.githubusercontent.com/87571811/200835787-62b2e949-8cb7-4896-be07-616879174a11.png)
+[Здесь сигналы принудительно доставляются в `delayed`(https://github.com/torvalds/linux/blob/1440f576022887004f719883acb094e7e0dd4944/kernel/fork.c#L2065
 
-Я использовал макрос для обхода связного списка multiprocess, как в [kernel/signal.c](https://github.com/torvalds/linux/blob/55be6084c8e0e0ada9278c2ab60b7a584378efda/kernel/signal.c)
-![image](https://user-images.githubusercontent.com/87571811/200835872-3c7e21fc-f440-4b03-a321-f17c2eed8425.png)
+
+[Здесь](https://github.com/torvalds/linux/blob/1440f576022887004f719883acb094e7e0dd4944/kernel/fork.c#L2475) или [здесь](https://github.com/torvalds/linux/blob/1440f576022887004f719883acb094e7e0dd4944/kernel/fork.c#L2554) структура уничтожается
+
+### [linux/signal.c](https://github.com/torvalds/linux/blob/493ffd6605b2d3d4dc7008ab927dba319f36671f/include/linux/sched/signal.h#L109)
+
+[Здесь](https://github.com/torvalds/linux/blob/55be6084c8e0e0ada9278c2ab60b7a584378efda/kernel/signal.c#L1178) структура используется для того, чтобы доставить сигналы процессу после форка
+
+Я использовал макрос `hlist_for_each_entry` для обхода связного списка multiprocess, как в [kernel/signal.c](https://github.com/torvalds/linux/blob/55be6084c8e0e0ada9278c2ab60b7a584378efda/kernel/signal.c)
 
 Проблема в том, что я не могу никак поймать момент, когда бы этот список был не пустым.
 
