@@ -8,9 +8,6 @@ OBJS = $(SRCS:.c=.o)
 
 obj-m += $(MODULE_NAME).o
 $(MODULE_NAME)-objs := lab_km.o lkmfs.o
-obj-m += lab_kernel_module.o
-lab_kernel_module-objs := lab_km.o lkmfs.o
-$(MODULE_NAME)-y = $(OBJS)
 
 CFLAGS=-std=gnu99 -Wno-declaration-after-statement
 ccflags-y=-std=gnu99 -Wno-declaration-after-statement
@@ -29,7 +26,6 @@ install:
 	sudo insmod ./$(MODULE_NAME).ko
 clean:
 	make -C $(KERNELDIR) M=$(PWD) clean
-remove:
+	sudo rmmod $(MODULE_NAME)
 	rm -f $(USER_APP)
 	rm -f $(LAB_CHARACTER_DEVICE)
-	sudo rmmod $(MODULE_NAME)
