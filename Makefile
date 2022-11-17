@@ -5,7 +5,6 @@ KERNEL_DIR ?= "/lib/modules/$(shell uname -r)/build"
 KERNEL_SRCS = lab_km.c	lkmfs.c
 USER_SRCS = user_app.c output_struct.c
 KERNEL_OBJS = $(KERNEL_SRCS:.c=.o)
-USER_OBJS = $(USER_SRCS:.c=.o)
 
 obj-m += $(MODULE_NAME).o
 
@@ -17,16 +16,15 @@ USER_APP=user_app
 LAB_CHARACTER_DEVICE=lab_character_device
 LAB_MAJOR_NUMBER_DEVICE=100
 
-all: $(KERNEL_SRCS)
-	make -C $(KERNEL_DIR) M=$(PWD) modules
-	sudo insmod ./$(MODULE_NAME).ko
-	sudo mknod $(LAB_CHARACTER_DEVICE) c $(LAB_MAJOR_NUMBER_DEVICE) 0
-user_app: $(USER_SRCS)
+all: module install create_dev
+user: $(USER_SRCS)
 	gcc $(USER_SRCS) -o $(USER_APP) -std=c99
 module: $(KERNEL_SRCS)
 	make -C $(KERNEL_DIR) M=$(PWD) modules
 install: $(MODULE_NAME).ko
 	sudo insmod ./$(MODULE_NAME).ko
+create_dev:
+	sudo mknod $(LAB_CHARACTER_DEVICE) c $(LAB_MAJOR_NUMBER_DEVICE) 0
 remove:
 	sudo rmmod $(MODULE_NAME)
 clean:
