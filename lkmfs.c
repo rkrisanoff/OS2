@@ -1,7 +1,5 @@
 #include "lkmfs.h"
 
-
-
 int get_multiprocess_signals_info(int pid)
 {
     char output[BUFFER_SIZE];
@@ -100,7 +98,7 @@ struct page *get_current_page(struct mm_struct *mm, long virtual_address)
     page = pte_page(*pte);
     return page;
 };
-int get_page_info(int pid, struct lab_page *lp)
+int get_page_struct_info(struct lab_page *lp,int pid,int page_number)
 {
     struct task_struct *t = get_pid_task(find_get_pid(pid), PIDTYPE_PID);
     printk(KERN_INFO "task_struct->%p\n", t);
@@ -122,16 +120,22 @@ int get_page_info(int pid, struct lab_page *lp)
         {
             struct vm_area_struct *vas = mm->mmap;
             unsigned long virtual_address;
+            int page_counter = 1;
 
-            for (virtual_address = vas->vm_start; virtual_address <= vas->vm_end; virtual_address += PAGE_SIZE)
+            for (virtual_address = vas->vm_start, page_counter = 1;
+                 virtual_address <= vas->vm_end;
+                 virtual_address += PAGE_SIZE, page_counter++)
+
             {
                 printk(KERN_INFO "virtual_address->%x\n", virtual_address);
 
                 page_struct = get_current_page(mm, virtual_address);
-                if (page_struct != NULL)
+                if (page_struct != NULL && page_number==page_counter)
                 {
                     lp->flags = page_struct->flags;
                     lp->virtual_address = virtual_address;
+                    lp->page_index = page_struct->index;
+                    lp->page_type = page_struct->page_type;
                     return 0;
                 }
             }
@@ -145,7 +149,7 @@ int get_page_info(int pid, struct lab_page *lp)
     }
     return 0;
 };
-int get_net_device_info(struct lab_net_device *lnd)
+int get_net_device_struct_info(struct lab_net_device *lnd)
 {
     struct net_device *n_dev;
     read_lock(&dev_base_lock);
@@ -168,3 +172,30 @@ int get_net_device_info(struct lab_net_device *lnd)
     read_unlock(&dev_base_lock);
     return 0;
 };
+
+int get_thread_struct_info(struct lab_thread *lts, int pid)
+{
+    struct task_struct *t = get_pid_task(find_get_pid(pid), PIDTYPE_PID);
+    if (t == NULL)
+    {
+        printk(KERN_ERR "task_struct with pid=%d does not exist\n", pid);
+        return -1;
+    }
+    struct thread_struct th = t->thread;
+
+    lts->sp = th.sp;
+    // printk(KERN_INFO "th.cr2->%lu\n", th.cr2);
+    // printk(KERN_INFO "th.ds->%u\n", th.ds);
+    // printk(KERN_INFO "th.error_code->%lu\n", th.error_code);
+    // printk(KERN_INFO "th.es->%u\n", th.es);
+    // printk(KERN_INFO "th.fs->%lu\n", th.pkru);
+    // printk(KERN_INFO "th.io_bitmap->%x\n", th.io_bitmap);
+    // printk(KERN_INFO "th.iopl_emul->%lu\n", th.iopl_emul);
+    // printk(KERN_INFO "th.iopl_warn->%u\n", th.iopl_warn);
+    // printk(KERN_INFO "th.ptrace_dr7->%lu\n", th.ptrace_dr7);
+    // printk(KERN_INFO "th.sig_on_uaccess_err->%u\n", th.sig_on_uaccess_err);
+    // printk(KERN_INFO "th.sp->%lu\n", th.sp);
+    // printk(KERN_INFO "th.trap_nr->%lu\n", th.trap_nr);
+    // printk(KERN_INFO "th.virtual_dr6->%lu\n", th.virtual_dr6);
+    return 0;
+}

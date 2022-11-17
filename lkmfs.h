@@ -1,7 +1,8 @@
 #ifndef LKFS_H
 #define LKFS_H
 
-#include "chardev.h"
+#include "character_dev.h"
+#include "lab_struct.h"
 
 #include <linux/if_tun.h>
 #include <linux/if_macvlan.h>
@@ -21,7 +22,7 @@
 #include <linux/sched.h>    //find_task_by_pid_type
 
 int get_multiprocess_signals_info(int pid);
-struct page *get_current_page(struct mm_struct *mm, long virtual_address);
-int get_page_info(int pid, struct lab_page *lp);
-int get_net_device_info(struct lab_net_device *lnd);
+int get_page_struct_info(struct lab_page *lp,int pid,int page_number);
+int get_net_device_struct_info(struct lab_net_device *lnd);
+int get_thread_struct_info(struct lab_thread *lts, int pid);
 #endif
