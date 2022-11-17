@@ -6,8 +6,8 @@
  *  (in chardev.c) and the process calling ioctl (ioctl.c)
  */
 
-#ifndef CHARDEV_H
-#define CHARDEV_H
+#ifndef CHARACTER_DEV_H
+#define CHARACTER_DEV_H
 
 #include <linux/ioctl.h>
 
@@ -45,7 +45,7 @@
 /*
  * Get the message of the device driver
  */
-#define IOCTL_GET_INFO _IOR(MAJOR_NUM, 1, char *)
+#define IOCTL_GET_INFO _IOW(MAJOR_NUM, 1, char *)
 /*
  * This IOCTL is used for output, to get the message
  * of the device driver. However, we still need the
@@ -56,41 +56,6 @@
 /*
  * The name of the device file
  */
-#define DEVICE_FILE_NAME "lab_character_device"
 #define DEVICE_NAME "lab_character_device"
-#define BUFFER_SIZE 256
-
-/**
- * lab network device struct
- * */
-struct lab_net_device
-{
-    int number;
-    char name[16];
-    unsigned long state;
-};
-/**
- * lab page struct
- * */
-struct lab_page
-{
-    unsigned long flags;
-    unsigned long virtual_address;
-};
-/**
- * request we sent to device
- * */
-struct lab_request
-{
-    int pid;
-};
-/**
- * request we get from device
- * */
-struct lab_response
-{
-    struct lab_net_device lnd;
-    struct lab_page lp;
-};
-
+#define BUFFER_SIZE 1024
 #endif
