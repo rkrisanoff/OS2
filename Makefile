@@ -27,7 +27,7 @@ create_dev:
 	sudo mknod $(LAB_CHARACTER_DEVICE) c $(LAB_MAJOR_NUMBER_DEVICE) 0
 remove:
 	sudo rmmod $(MODULE_NAME)
-clean:
+clean: remove
 	make -C $(KERNEL_DIR) M=$(PWD) clean
 	rm -f $(USER_APP)
 	rm -f $(LAB_CHARACTER_DEVICE)
