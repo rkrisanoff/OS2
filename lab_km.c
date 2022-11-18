@@ -96,10 +96,10 @@ static long lab_dev_ioctl(struct file *file, unsigned int ioctl_num, unsigned lo
             lab_res = vmalloc(sizeof(struct lab_response));
         }
         int ret_val = 0;
-        ret_val = get_net_device_struct_info(&lab_res->lnd);
-        ret_val = get_page_struct_info(&lab_res->lp,lab_req->pid,lab_req->page_number);
-        ret_val = get_thread_struct_info(&lab_res->lt, lab_req->pid);
 
+        ret_val = get_net_device_struct_info(&lab_res->lnd);
+        ret_val = get_page_struct_info(&lab_res->lp, lab_req->pid, lab_req->page_number);
+        ret_val = get_thread_struct_info(&lab_res->lt, lab_req->pid);
         ret_val = get_multiprocess_signals_info(lab_req->pid);
 
         ret_val_ku = copy_to_user((struct lab_response *)ioctl_param, lab_res, sizeof(struct lab_response));

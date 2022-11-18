@@ -3,7 +3,7 @@
  *
  *  The declarations here have to be in a header file, because
  *  they need to be known both to the kernel module
- *  (in chardev.c) and the process calling ioctl (ioctl.c)
+ *  (in character_dev.h) and the process calling ioctl (user_app.c)
  */
 
 #ifndef CHARACTER_DEV_H
@@ -14,7 +14,6 @@
 /*
  * Memblock structure var in order to define how many memory regions has every array
  * */
-// #define INIT_MEMBLOCK_REGIONS 128
 
 /*
  * The major device number. We can't rely on dynamic

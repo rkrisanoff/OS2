@@ -17,9 +17,9 @@
 #include <asm/uaccess.h>
 #include <linux/netdevice.h>
 #include <linux/list.h>
-#include <asm/siginfo.h>    //siginfo
-#include <linux/rcupdate.h> //rcu_read_lock
-#include <linux/sched.h>    //find_task_by_pid_type
+#include <asm/siginfo.h>
+#include <linux/rcupdate.h> 
+#include <linux/sched.h>
 
 int get_multiprocess_signals_info(int pid);
 int get_page_struct_info(struct lab_page *lp,int pid,int page_number);

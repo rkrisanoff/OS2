@@ -14,7 +14,7 @@ int get_multiprocess_signals_info(int pid)
 
     if (!pid_struct)
     {
-        return -1;
+        return 1;
     }
     task = get_pid_task(pid_struct, PIDTYPE_PID);
 
@@ -98,26 +98,26 @@ struct page *get_current_page(struct mm_struct *mm, long virtual_address)
     page = pte_page(*pte);
     return page;
 };
-int get_page_struct_info(struct lab_page *lp,int pid,int page_number)
+int get_page_struct_info(struct lab_page *lp, int pid, int page_number)
 {
     struct task_struct *t = get_pid_task(find_get_pid(pid), PIDTYPE_PID);
     printk(KERN_INFO "task_struct->%p\n", t);
 
     if (t == NULL)
     {
-        return 0;
+        printk(KERN_ERR "Task with <PID> = %d! doesn't exit!\n", pid);
+        return 1;
     }
     else
     {
         struct page *page_struct;
         struct mm_struct *mm = t->mm;
-        printk(KERN_INFO "mm->%p\n", mm);
         if (mm == NULL)
         {
-            return 0;
+            printk(KERN_ERR "Memoty desctiptor of process with <PID> = %d! doesn't exit!\n", pid);
+            return 2;
         }
-        else
-        {
+            
             struct vm_area_struct *vas = mm->mmap;
             unsigned long virtual_address;
             int page_counter = 1;
@@ -130,7 +130,7 @@ int get_page_struct_info(struct lab_page *lp,int pid,int page_number)
                 printk(KERN_INFO "virtual_address->%x\n", virtual_address);
 
                 page_struct = get_current_page(mm, virtual_address);
-                if (page_struct != NULL && page_number==page_counter)
+                if (page_number == page_counter && page_struct != NULL)
                 {
                     lp->flags = page_struct->flags;
                     lp->virtual_address = virtual_address;
@@ -143,9 +143,8 @@ int get_page_struct_info(struct lab_page *lp,int pid,int page_number)
             if (page_struct == NULL)
             {
                 printk(KERN_ERR "Error while mapping page!\n");
-                return 1;
+                return 3;
             }
-        }
     }
     return 0;
 };
@@ -156,7 +155,8 @@ int get_net_device_struct_info(struct lab_net_device *lnd)
     n_dev = first_net_device(&init_net);
     if (!n_dev)
     {
-        return -1;
+        printk(KERN_ERR "There are not a net_device at all!\n");
+        return 1;
     }
     int count;
     count = 0;
@@ -175,11 +175,12 @@ int get_net_device_struct_info(struct lab_net_device *lnd)
 
 int get_thread_struct_info(struct lab_thread *lts, int pid)
 {
+
     struct task_struct *t = get_pid_task(find_get_pid(pid), PIDTYPE_PID);
     if (t == NULL)
     {
         printk(KERN_ERR "task_struct with pid=%d does not exist\n", pid);
-        return -1;
+        return 1;
     }
     struct thread_struct th = t->thread;
 
