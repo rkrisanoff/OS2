@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 {
     int fd;
 
-    if (argc == 1 || (strcmp(argv[1], "help") == 0))
+    if (argc < 3 || (strcmp(argv[1], "help") == 0))
     {
         printf("Usage %s <PID> <PAGE-NUMBER>\n", argv[0]);
         printf("<PID> must be integer more than zero\n");
@@ -43,32 +43,30 @@ int main(int argc, char **argv)
         return 0;
     }
 
+    // request data declare
     struct lab_request *lab_req = malloc(sizeof(struct lab_request));
-
-    if (lab_req->pid = atoi(argv[1]))
+    lab_req->page_number = 0;
+    lab_req->pid;
+    lab_req->pid = atoi(argv[1]);
+    lab_req->page_number = atoi(argv[2]);
+    if (lab_req->pid)
     {
-        if (lab_req->pid)
-        {
-            printf("Entered <PID> is %d\n", lab_req->pid);
-        }
-        else
-        {
-            printf("Wrong <PID>\n");
-            return -1;
-        }
+        printf("Entered <PID> is %d\n", lab_req->pid);
     }
-
-    if (lab_req->page_number = atoi(argv[2]))
+    else
     {
-        if (lab_req->page_number)
-        {
-            printf("Entered <PAGE-NUMBER> is %d\n", lab_req->page_number);
-        }
-        else
-        {
-            printf("Wrong <PAGE-NUMBER>\n");
-            return -1;
-        }
+        printf("Wrong <PID>\n");
+        return 1;
+    }
+    
+    if (lab_req->page_number)
+    {
+        printf("Entered <PAGE-NUMBER> is %d\n", lab_req->page_number);
+    }
+    else
+    {
+        printf("Wrong <PAGE-NUMBER>\n");
+        return 2;
     }
 
     char output[1024];
